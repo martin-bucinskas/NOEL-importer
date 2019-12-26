@@ -51,4 +51,40 @@ get_all_lines(Device) ->
 %%--------------------------------------------------------------------
 parse_line(Line) ->
   <<ID:80/bitstring, AGE:24/bitstring, LOCID:64/bitstring, CT:16/bitstring, L:8/bitstring, GIVEN:192/bitstring, FAMILY:192/bitstring, _Rest/bitstring>> = binary:list_to_bin(Line),
-  io:format("Name: ~p ~p~n", [GIVEN, FAMILY]).
+  io:format("Name: ~p ~p~n", [GIVEN, FAMILY]),
+  NaughtyOrNice = is_naughty_or_nice(L, AGE, GIVEN, FAMILY),
+  io:format("Naughty or Nice: ~p~n", [NaughtyOrNice]).
+
+is_naughty_or_nice(SentLetter, Age, GivenName, FamilyName) ->
+  case SentLetter of
+    <<"Y">> -> nice;
+    <<"N">> ->
+      FullName = <<GivenName/bitstring, FamilyName/bitstring>>,
+      Vowels = [C || <<C>> <= FullName, is_vowel(C)],
+      Consonants = [C || <<C>> <= FullName, is_consonant(C)],
+      Value = length(Consonants) - length(Vowels) + list_to_integer(binary:bin_to_list(Age)),
+      if
+        Value band 1 == 0 -> nice;
+        true -> naughty
+      end;
+      _ -> naughty
+  end.
+
+is_vowel(C) ->
+  if
+    C =:= $A -> true;
+    C =:= $E -> true;
+    C =:= $I -> true;
+    C =:= $O -> true;
+    C =:= $U -> true;
+    true -> false
+  end.
+
+is_consonant(C) ->
+  IsVowel = is_vowel(C),
+
+  if
+    IsVowel =:= true -> false;
+    C =:= 32 -> false; %% ignore whitespace
+    true -> true
+  end.
