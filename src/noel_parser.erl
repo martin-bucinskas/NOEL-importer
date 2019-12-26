@@ -28,7 +28,8 @@ parse_file(FileName) ->
 %%--------------------------------------------------------------------
 %% @private
 %% @doc
-%% This function reads a file line by line and parses the line immediately.
+%% This function reads a file line by line and parses the line
+%% immediately.
 %%
 %% @end
 %%--------------------------------------------------------------------
@@ -40,6 +41,14 @@ get_all_lines(Device) ->
       parse_line(Line)
   end.
 
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% This function takes a line from the virtual card file and unpacks
+%% the line into variables based on their length.
+%%
+%% @end
+%%--------------------------------------------------------------------
 parse_line(Line) ->
   <<ID:80/bitstring, AGE:24/bitstring, LOCID:64/bitstring, CT:16/bitstring, L:8/bitstring, GIVEN:192/bitstring, FAMILY:192/bitstring, _Rest/bitstring>> = binary:list_to_bin(Line),
   io:format("Name: ~p ~p~n", [GIVEN, FAMILY]).
