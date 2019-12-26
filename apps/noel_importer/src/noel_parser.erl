@@ -51,9 +51,20 @@ get_all_lines(Device) ->
 %%--------------------------------------------------------------------
 parse_line(Line) ->
   <<ID:80/bitstring, AGE:24/bitstring, LOCID:64/bitstring, CT:16/bitstring, L:8/bitstring, GIVEN:192/bitstring, FAMILY:192/bitstring, _Rest/bitstring>> = binary:list_to_bin(Line),
-  io:format("Name: ~p ~p~n", [GIVEN, FAMILY]),
   NaughtyOrNice = is_naughty_or_nice(L, AGE, GIVEN, FAMILY),
-  io:format("Naughty or Nice: ~p~n", [NaughtyOrNice]).
+
+  io:format("Name: ~p ~p~n", [GIVEN, FAMILY]),
+  io:format("Naughty or Nice: ~p~n", [NaughtyOrNice]),
+
+  Timezone = <<"Europe/Helsinki">>, %% TODO: Retrieve timezone from LOCID
+  Val = cache:get(my_cache, Timezone),
+
+  case Val of
+    undefined ->
+      io:format("Europe/Helsinki timezone not found in cache. Adding it now...~n"),
+      cache:put(my_cache, <<"Europe/Helsinki">>, "0");
+    _ -> io:format("Cached value for key ~p is ~p~n", [Timezone, Val])
+  end.
 
 is_naughty_or_nice(SentLetter, Age, GivenName, FamilyName) ->
   case SentLetter of
