@@ -35,9 +35,11 @@ parse_file(FileName) ->
 get_all_lines(Device) ->
   case io:get_line(Device, "") of
     eof -> [];
-    Line -> Line ++ get_all_lines(Device),
-    parse_line(Line)
+    Line ->
+      Line ++ get_all_lines(Device),
+      parse_line(Line)
   end.
 
 parse_line(Line) ->
-  Line.
+  <<ID:80/bitstring, AGE:24/bitstring, LOCID:64/bitstring, CT:16/bitstring, L:8/bitstring, GIVEN:192/bitstring, FAMILY:192/bitstring, _Rest/bitstring>> = binary:list_to_bin(Line),
+  io:format("Name: ~p ~p~n", [GIVEN, FAMILY]).
