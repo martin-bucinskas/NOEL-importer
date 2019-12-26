@@ -29,7 +29,7 @@ init([]) ->
     SupFlags = #{strategy => one_for_all,
                  intensity => 0,
                  period => 1},
-    ChildSpecs = [],
+    ChildSpecs = [#{id => noel_parser, start => { noel_parser, parse_file, ["test_file.txt"]}}],
     {ok, {SupFlags, ChildSpecs}}.
 
 %% internal functions
