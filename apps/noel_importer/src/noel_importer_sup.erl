@@ -26,9 +26,9 @@ start_link() ->
 %%                  type => worker(),       % optional
 %%                  modules => modules()}   % optional
 init([]) ->
-    SupFlags = #{strategy => one_for_all,
-                 intensity => 0,
-                 period => 1},
+    SupFlags = #{strategy => one_for_one,
+                 intensity => 2,
+                 period => 10},
     ChildSpecs = [#{id => noel_parser, start => { noel_parser, parse_file, ["noel_test.dat"]}}],
     {ok, {SupFlags, ChildSpecs}}.
 
