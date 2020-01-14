@@ -10,23 +10,24 @@
 -author("martin.bucinskas").
 
 %% API
--export([get_timezone_from_locid/1]).
+-export([start/1, get_timezone_from_locid/1]).
 
-start() ->
-  ets:new(geonames_table, [set, named_table]),
-  {ok, File} = file:read_file("cities500.dat"),
+start(CitiesData) ->
+  ets:new(geonames_table, [public, set, named_table]), %% F***ing public flag was not set!
+  {ok, File} = file:read_file(CitiesData),
   Lines = [binary_to_list(Binary) || Binary <- binary:split(File, <<"\n">>, [global]), Binary =/= << >>],
   ParsedLines = lists:map(
     fun(Str) -> string:tokens(Str, "\t") end, Lines
   ),
   loop_through_each_entry(ParsedLines).
+%%  timer:sleep(infinity). %% Needed the sleep to infinity, otherwise, this will stop the process, destroying ETS.
 
-loop_through_each_entry([]) -> ok;
+loop_through_each_entry([]) -> finished_parsing_file;
 loop_through_each_entry([H|T]) ->
   store_row(H),
   loop_through_each_entry(T).
 
-store_row([]) -> ok;
+store_row([]) -> empty1;
 store_row(Row) ->
   LocationID = lists:nth(1, Row),
   CityName = lists:nth(2, Row),
@@ -34,5 +35,4 @@ store_row(Row) ->
   ets:insert(geonames_table, {LocationID, CityName, Timezone}).
 
 get_timezone_from_locid(LocationId) ->
-  start(),
   ets:lookup(geonames_table, LocationId).
