@@ -18,7 +18,7 @@ start() ->
 
 get_timezone_offset_from_timezone(Timezone) ->
   start(),
-  {ok, {{_Version, 200, _ReasonPhrase}, _Headers, Body}} = httpc:request(get, {"http://api.timezonedb.com/v2.1/convert-time-zone?key=11111111111&format=json&from=" ++ Timezone ++ "&to=Europe/Helsinki", []}, [], []),
+  {ok, {{_Version, 200, _ReasonPhrase}, _Headers, Body}} = httpc:request(get, {"http://api.timezonedb.com/v2.1/convert-time-zone?key=&format=json&from=" ++ Timezone ++ "&to=Europe/Helsinki", []}, [], []),
   Decoded = yamerl_constr:string(Body, [{schema, json}]),
   {_, Offset} = lists:last(lists:last(Decoded)),
   Offset.
