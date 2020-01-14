@@ -35,4 +35,7 @@ store_row(Row) ->
   ets:insert(geonames_table, {LocationID, CityName, Timezone}).
 
 get_timezone_from_locid(LocationId) ->
-  ets:lookup(geonames_table, LocationId).
+  ListString = binary:bin_to_list(LocationId),
+  io:format("Trying to retrieve location: ~p~n", [ListString]),
+  ets:lookup(geonames_table, ListString).
+

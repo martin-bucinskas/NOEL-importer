@@ -13,10 +13,6 @@ start(_StartType, _StartArgs) ->
     io:format("Starting Cache~n"),
     application:start(cache),
     {ok, _} = cache:start_link(my_cache, [{n, 10}, {ttl, 60}]),
-    io:format("Starting Geonames_Timezone Supervisor~n"),
-    geonames_timezone_sup:start_link(),
-    io:format("Starting Timezone Offsets Supervisor~n"),
-    timezone_offsets_sup:start_link(),
     io:format("Starting Noel Importer Supervisor~n"),
     noel_importer_sup:start_link().
 

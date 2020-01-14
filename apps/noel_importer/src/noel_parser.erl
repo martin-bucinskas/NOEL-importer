@@ -9,6 +9,8 @@
 -module(noel_parser).
 -author("martin.bucinskas").
 
+-define(API_KEY, "UV8479ES0HN3").
+
 %% API
 -export([parse_file/1]).
 
@@ -56,18 +58,25 @@ parse_line(Line) ->
   io:format("Name: ~p ~p~n", [GIVEN, FAMILY]),
   io:format("Naughty or Nice: ~p~n", [NaughtyOrNice]),
 
-%%  LOOKUP = ets:lookup(geonames_table, "01816790"),
-%%  io:format("LOOKUP VALUE: ~p~n", [LOOKUP]),
-
-  Timezone = geonames_timezone:get_timezone_from_locid(LOCID),
   Val = cache:get(my_cache, LOCID),
 
   case Val of
     undefined ->
+      Timezone = geonames_timezone:get_timezone_from_locid(LOCID),
       io:format("~p timezone not found in cache. Adding it now...~n", [Timezone]),
       cache:put(my_cache, LOCID, Timezone);
     _ -> io:format("Cached value for key ~p is ~p~n", [LOCID, Val])
-  end.
+  end,
+
+  {_LocId, _CityName, Zone} = lists:last(cache:get(my_cache, LOCID)),
+  TimeOffset = timezone_offsets:get_timezone_offset_from_timezone(Zone, ?API_KEY),
+  result(GIVEN, FAMILY, Zone).
+
+result(Given, Family, Timezone) ->
+  StrGiven = binary:bin_to_list(Given),
+  StrFamily = binary:bin_to_list(Family),
+  Zone = lists:last(Timezone),
+  io:format("+ ~p ~p ~p~n", [StrGiven, StrFamily, Zone]).
 
 is_naughty_or_nice(SentLetter, Age, GivenName, FamilyName) ->
   case SentLetter of

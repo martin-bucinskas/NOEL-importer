@@ -14,7 +14,10 @@
 -define(SERVER, ?MODULE).
 
 start_link() ->
-    supervisor:start_link({local, ?SERVER}, ?MODULE, []).
+  io:format("Starting N.O.E.L. Importer!~n"),
+  geonames_timezone:start("cities500.dat"),
+  timezone_offsets:start(),
+  supervisor:start_link({local, ?SERVER}, ?MODULE, []).
 
 %% sup_flags() = #{strategy => strategy(),         % optional
 %%                 intensity => non_neg_integer(), % optional
