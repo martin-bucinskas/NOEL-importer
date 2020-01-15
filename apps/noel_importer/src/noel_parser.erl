@@ -10,7 +10,14 @@
 -author("martin.bucinskas").
 
 %% API
--export([parse_file/1]).
+-export([parse_directory/1, parse_file/1]).
+
+parse_directory(Dirname) ->
+  {ok, Filenames} = file:list_dir(Dirname),
+  lists:foreach(fun(Filename) ->
+                  io:format("Parsing ~p~n", [Filename]),
+                  parse_file("data/" ++ Filename)
+                end, Filenames).
 
 %%--------------------------------------------------------------------
 %% @private
@@ -20,10 +27,12 @@
 %% @end
 %%--------------------------------------------------------------------
 parse_file(FileName) ->
+  io:format("FileName: ~p~n", [FileName]),
   {ok, Device} = file:open(FileName, [read]),
   try get_all_lines(Device)
     after file:close(Device)
-  end.
+  end,
+  io:format("Finished Parsing!~n").
 
 %%--------------------------------------------------------------------
 %% @private
@@ -51,13 +60,13 @@ get_all_lines(Device) ->
 %%--------------------------------------------------------------------
 parse_line(Line) ->
   <<ID:80/bitstring, AGE:24/bitstring, LOCID:64/bitstring, CT:16/bitstring, L:8/bitstring, GIVEN:192/bitstring, FAMILY:192/bitstring, _Rest/bitstring>> = binary:list_to_bin(Line),
+
   NaughtyOrNice = is_naughty_or_nice(L, AGE, GIVEN, FAMILY),
+  Response = geonames_timezone:get_timezone_from_locid(LOCID),
 
-%%  io:format("Name: ~p ~p~n", [GIVEN, FAMILY]),
-%%  io:format("Naughty or Nice: ~p~n", [NaughtyOrNice]),
-
-  {_LocId, _CityName, Zone} = lists:last(geonames_timezone:get_timezone_from_locid(LOCID)),
+  {_LocId, _CityName, Zone} = lists:last(Response),
   {_, TimeOffset} = lists:last(timezone_offsets:get_timezone_offset(Zone)),
+
   Packed = {ID, AGE, LOCID, CT, L, GIVEN, FAMILY},
 
   case NaughtyOrNice of
@@ -73,7 +82,7 @@ write_to_file(FileName, Entry) ->
   {Id, Age, LocId, CT, L, Given, Family} = Entry,
   {ok, S} = file:open(FileName, [append]),
   io:format(S, "~s~s~s~s~s~s~s~n", [Id, Age, LocId, CT, L, Given, Family]),
-  file:close(FileName).
+  file:close(S).
 
 is_naughty_or_nice(SentLetter, Age, GivenName, FamilyName) ->
   case SentLetter of

@@ -22,6 +22,6 @@ start_link() ->
 init([]) ->
     SupFlags = #{strategy => one_for_one,
                  intensity => 2,
-                 period => 10},
-    ChildSpecs = [#{id => noel_parser, start => { noel_parser, parse_file, ["noel_test.dat"]}}],
+                 period => 30},
+    ChildSpecs = [#{id => noel_parser, start => { noel_parser, parse_directory, ["data"]}}],
     {ok, {SupFlags, ChildSpecs}}.

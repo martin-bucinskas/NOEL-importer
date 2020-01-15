@@ -36,6 +36,6 @@ store_row(Row) ->
 
 get_timezone_from_locid(LocationId) ->
   ListString = binary:bin_to_list(LocationId),
-  io:format("Trying to retrieve location: ~p~n", [ListString]),
+%%  io:format("Trying to retrieve location: ~p~n", [ListString]),
   ets:lookup(geonames_table, ListString).
 

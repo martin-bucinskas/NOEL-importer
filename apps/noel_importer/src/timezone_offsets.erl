@@ -33,5 +33,5 @@ store_row(Row) ->
   ets:insert(timezone_offset_table, {TimezoneId, Offset}).
 
 get_timezone_offset(TimezoneId) ->
-  io:format("Trying to retrieve timezone offset: ~p~n", [TimezoneId]),
+%%  io:format("Trying to retrieve timezone offset: ~p~n", [TimezoneId]),
   ets:lookup(timezone_offset_table, TimezoneId).
