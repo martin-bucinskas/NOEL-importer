@@ -20,7 +20,6 @@ start(CitiesData) ->
     fun(Str) -> string:tokens(Str, "\t") end, Lines
   ),
   loop_through_each_entry(ParsedLines).
-%%  timer:sleep(infinity). %% Needed the sleep to infinity, otherwise, this will stop the process, destroying ETS.
 
 loop_through_each_entry([]) -> finished_parsing_file;
 loop_through_each_entry([H|T]) ->
@@ -36,6 +35,5 @@ store_row(Row) ->
 
 get_timezone_from_locid(LocationId) ->
   ListString = binary:bin_to_list(LocationId),
-%%  io:format("Trying to retrieve location: ~p~n", [ListString]),
   ets:lookup(geonames_table, ListString).
 

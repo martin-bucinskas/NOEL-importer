@@ -13,7 +13,7 @@
 -export([start/1, get_timezone_offset/1]).
 
 start(TimezoneOffsetData) ->
-  ets:new(timezone_offset_table, [public, set, named_table]), %% F***ing public flag was not set!
+  ets:new(timezone_offset_table, [public, set, named_table]),
   {ok, File} = file:read_file(TimezoneOffsetData),
   Lines = [binary_to_list(Binary) || Binary <- binary:split(File, <<"\n">>, [global]), Binary =/= << >>],
   ParsedLines = lists:map(
@@ -33,5 +33,4 @@ store_row(Row) ->
   ets:insert(timezone_offset_table, {TimezoneId, Offset}).
 
 get_timezone_offset(TimezoneId) ->
-%%  io:format("Trying to retrieve timezone offset: ~p~n", [TimezoneId]),
   ets:lookup(timezone_offset_table, TimezoneId).
