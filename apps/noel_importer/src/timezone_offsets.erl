@@ -13,7 +13,7 @@
 -export([start/1, get_timezone_offset/1]).
 
 start(TimezoneOffsetData) ->
-  ets:new(timezone_offset_table, [public, set, named_table]),
+  ets:new(timezone_offset_table, [public, set, named_table, {read_concurrency,  true}, {write_concurrency, true}]),
   {ok, File} = file:read_file(TimezoneOffsetData),
   Lines = [binary_to_list(Binary) || Binary <- binary:split(File, <<"\n">>, [global]), Binary =/= << >>],
   ParsedLines = lists:map(
