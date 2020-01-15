@@ -22,3 +22,4 @@ rebar3.crashdump
 *~
 noel_test.dat
 config/secrets.config
+sorted
