@@ -53,40 +53,27 @@ parse_line(Line) ->
   <<ID:80/bitstring, AGE:24/bitstring, LOCID:64/bitstring, CT:16/bitstring, L:8/bitstring, GIVEN:192/bitstring, FAMILY:192/bitstring, _Rest/bitstring>> = binary:list_to_bin(Line),
   NaughtyOrNice = is_naughty_or_nice(L, AGE, GIVEN, FAMILY),
 
-  io:format("Name: ~p ~p~n", [GIVEN, FAMILY]),
-  io:format("Naughty or Nice: ~p~n", [NaughtyOrNice]),
+%%  io:format("Name: ~p ~p~n", [GIVEN, FAMILY]),
+%%  io:format("Naughty or Nice: ~p~n", [NaughtyOrNice]),
 
-  Val = cache:get(my_cache, LOCID),
-
-  case Val of
-    undefined ->
-      Timezone = geonames_timezone:get_timezone_from_locid(LOCID),
-      io:format("~p timezone not found in cache. Adding it now...~n", [Timezone]),
-      cache:put(my_cache, LOCID, Timezone);
-    _ -> io:format("Cached value for key ~p is ~p~n", [LOCID, Val])
-  end,
-
-  {_LocId, _CityName, Zone} = lists:last(cache:get(my_cache, LOCID)),
+  {_LocId, _CityName, Zone} = lists:last(geonames_timezone:get_timezone_from_locid(LOCID)),
   {_, TimeOffset} = lists:last(timezone_offsets:get_timezone_offset(Zone)),
-  Packed = {ID, AGE, LOCID, CT, L, GIVEN, FAMILY, NaughtyOrNice, TimeOffset},
-  write_to_file(Packed).
+  Packed = {ID, AGE, LOCID, CT, L, GIVEN, FAMILY},
 
-write_to_file(Entry) ->
-  {Id, Age, LocId, CT, L, Given, Family, NaughtyOrNice, TimeOffset} = Entry,
   case NaughtyOrNice of
     naughty ->
       FileName = "sorted/naughty_" ++ TimeOffset ++ ".dat",
-      {ok, S} = file:open(FileName, [append]),
-      io:format(S, "~s~s~s~s~s~s~s~n", [Id, Age, LocId, CT, L, Given, Family]),
-      file:close(FileName);
-%%      write to naughty + timeOffset file
+      write_to_file(FileName, Packed);
     nice ->
       FileName = "sorted/nice_" ++ TimeOffset ++ ".dat",
-      {ok, S} = file:open(FileName, [append]),
-      io:format(S, "~s~s~s~s~s~s~s~n", [Id, Age, LocId, CT, L, Given, Family]),
-      file:close(FileName)
-%%      write to nice + timeOffset file
+      write_to_file(FileName, Packed)
   end.
+
+write_to_file(FileName, Entry) ->
+  {Id, Age, LocId, CT, L, Given, Family} = Entry,
+  {ok, S} = file:open(FileName, [append]),
+  io:format(S, "~s~s~s~s~s~s~s~n", [Id, Age, LocId, CT, L, Given, Family]),
+  file:close(FileName).
 
 is_naughty_or_nice(SentLetter, Age, GivenName, FamilyName) ->
   case SentLetter of
