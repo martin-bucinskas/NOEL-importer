@@ -13,7 +13,7 @@
 -export([start/1, get_timezone_from_locid/1]).
 
 start(CitiesData) ->
-  ets:new(geonames_table, [public, set, named_table]), %% F***ing public flag was not set!
+  ets:new(geonames_table, [public, set, named_table, {read_concurrency,  true}, {write_concurrency, true}]), %% F***ing public flag was not set!
   {ok, File} = file:read_file(CitiesData),
   Lines = [binary_to_list(Binary) || Binary <- binary:split(File, <<"\n">>, [global]), Binary =/= << >>],
   ParsedLines = lists:map(
