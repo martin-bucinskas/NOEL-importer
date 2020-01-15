@@ -9,8 +9,6 @@
 -module(noel_parser).
 -author("martin.bucinskas").
 
--define(API_KEY, "UV8479ES0HN3").
-
 %% API
 -export([parse_file/1]).
 
@@ -52,7 +50,7 @@ get_all_lines(Device) ->
 %% @end
 %%--------------------------------------------------------------------
 parse_line(Line) ->
-  <<_ID:80/bitstring, AGE:24/bitstring, LOCID:64/bitstring, _CT:16/bitstring, L:8/bitstring, GIVEN:192/bitstring, FAMILY:192/bitstring, _Rest/bitstring>> = binary:list_to_bin(Line),
+  <<ID:80/bitstring, AGE:24/bitstring, LOCID:64/bitstring, CT:16/bitstring, L:8/bitstring, GIVEN:192/bitstring, FAMILY:192/bitstring, _Rest/bitstring>> = binary:list_to_bin(Line),
   NaughtyOrNice = is_naughty_or_nice(L, AGE, GIVEN, FAMILY),
 
   io:format("Name: ~p ~p~n", [GIVEN, FAMILY]),
@@ -69,14 +67,26 @@ parse_line(Line) ->
   end,
 
   {_LocId, _CityName, Zone} = lists:last(cache:get(my_cache, LOCID)),
-  TimeOffset = timezone_offsets:get_timezone_offset_from_timezone(Zone, ?API_KEY),
-  result(GIVEN, FAMILY, Zone).
+  {_, TimeOffset} = lists:last(timezone_offsets:get_timezone_offset(Zone)),
+  Packed = {ID, AGE, LOCID, CT, L, GIVEN, FAMILY, NaughtyOrNice, TimeOffset},
+  write_to_file(Packed).
 
-result(Given, Family, Timezone) ->
-  StrGiven = binary:bin_to_list(Given),
-  StrFamily = binary:bin_to_list(Family),
-  Zone = lists:last(Timezone),
-  io:format("+ ~p ~p ~p~n", [StrGiven, StrFamily, Zone]).
+write_to_file(Entry) ->
+  {Id, Age, LocId, CT, L, Given, Family, NaughtyOrNice, TimeOffset} = Entry,
+  case NaughtyOrNice of
+    naughty ->
+      FileName = "sorted/naughty_" ++ TimeOffset ++ ".dat",
+      {ok, S} = file:open(FileName, [append]),
+      io:format(S, "~s~s~s~s~s~s~s~n", [Id, Age, LocId, CT, L, Given, Family]),
+      file:close(FileName);
+%%      write to naughty + timeOffset file
+    nice ->
+      FileName = "sorted/nice_" ++ TimeOffset ++ ".dat",
+      {ok, S} = file:open(FileName, [append]),
+      io:format(S, "~s~s~s~s~s~s~s~n", [Id, Age, LocId, CT, L, Given, Family]),
+      file:close(FileName)
+%%      write to nice + timeOffset file
+  end.
 
 is_naughty_or_nice(SentLetter, Age, GivenName, FamilyName) ->
   case SentLetter of

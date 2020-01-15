@@ -16,23 +16,12 @@
 start_link() ->
   io:format("Starting N.O.E.L. Importer!~n"),
   geonames_timezone:start("cities500.dat"),
-  timezone_offsets:start(),
+  timezone_offsets:start("timezone_offset.dat"),
   supervisor:start_link({local, ?SERVER}, ?MODULE, []).
 
-%% sup_flags() = #{strategy => strategy(),         % optional
-%%                 intensity => non_neg_integer(), % optional
-%%                 period => pos_integer()}        % optional
-%% child_spec() = #{id => child_id(),       % mandatory
-%%                  start => mfargs(),      % mandatory
-%%                  restart => restart(),   % optional
-%%                  shutdown => shutdown(), % optional
-%%                  type => worker(),       % optional
-%%                  modules => modules()}   % optional
 init([]) ->
     SupFlags = #{strategy => one_for_one,
                  intensity => 2,
                  period => 10},
     ChildSpecs = [#{id => noel_parser, start => { noel_parser, parse_file, ["noel_test.dat"]}}],
     {ok, {SupFlags, ChildSpecs}}.
-
-%% internal functions
