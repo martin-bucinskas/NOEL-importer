@@ -20,7 +20,6 @@ init([]) ->
   SupFlags = #{strategy => one_for_all,
     intensity => 2,
     period => 10},
-  ChildSpecs = [#{id => geonames_timezone, start => { geonames_timezone, start, ["cities500.dat"]}}],
+  ChildSpecs = [#{id => geonames_timezone, start => { geonames_timezone, start, ["resources/cities500.dat"]}}],
   {ok, {SupFlags, ChildSpecs}}.
 
-%% internal functions

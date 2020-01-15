@@ -15,8 +15,8 @@
 
 start_link() ->
   io:format("Starting N.O.E.L. Importer!~n"),
-  geonames_timezone:start("cities500.dat"),
-  timezone_offsets:start("timezone_offset.dat"),
+  geonames_timezone:start("resources/cities500.dat"),
+  timezone_offsets:start("resources/timezone_offset.dat"),
   supervisor:start_link({local, ?SERVER}, ?MODULE, []).
 
 init([]) ->

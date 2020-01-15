@@ -32,4 +32,3 @@ init([]) ->
   ChildSpecs = [#{id => timezone_offsets, start => { timezone_offsets, start, []}}],
   {ok, {SupFlags, ChildSpecs}}.
 
-%% internal functions
