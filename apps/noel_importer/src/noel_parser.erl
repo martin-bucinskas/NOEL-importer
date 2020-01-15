@@ -10,7 +10,14 @@
 -author("martin.bucinskas").
 
 %% API
--export([parse_file/1]).
+-export([parse_directory/1, parse_file/1]).
+
+parse_directory(Dirname) ->
+  {ok, Filenames} = file:list_dir(Dirname),
+  lists:foreach(fun(Filename) ->
+                  io:format("Parsing ~p~n", [Filename]),
+                  parse_file("data/" ++ Filename)
+                end, Filenames).
 
 %%--------------------------------------------------------------------
 %% @private
@@ -20,10 +27,12 @@
 %% @end
 %%--------------------------------------------------------------------
 parse_file(FileName) ->
+  io:format("FileName: ~p~n", [FileName]),
   {ok, Device} = file:open(FileName, [read]),
   try get_all_lines(Device)
     after file:close(Device)
-  end.
+  end,
+  io:format("Finished Parsing!~n").
 
 %%--------------------------------------------------------------------
 %% @private
@@ -50,24 +59,30 @@ get_all_lines(Device) ->
 %% @end
 %%--------------------------------------------------------------------
 parse_line(Line) ->
-  <<_ID:80/bitstring, AGE:24/bitstring, LOCID:64/bitstring, _CT:16/bitstring, L:8/bitstring, GIVEN:192/bitstring, FAMILY:192/bitstring, _Rest/bitstring>> = binary:list_to_bin(Line),
+  <<ID:80/bitstring, AGE:24/bitstring, LOCID:64/bitstring, CT:16/bitstring, L:8/bitstring, GIVEN:192/bitstring, FAMILY:192/bitstring, _Rest/bitstring>> = binary:list_to_bin(Line),
+
   NaughtyOrNice = is_naughty_or_nice(L, AGE, GIVEN, FAMILY),
+  Response = geonames_timezone:get_timezone_from_locid(LOCID),
 
-  io:format("Name: ~p ~p~n", [GIVEN, FAMILY]),
-  io:format("Naughty or Nice: ~p~n", [NaughtyOrNice]),
+  {_LocId, _CityName, Zone} = lists:last(Response),
+  {_, TimeOffset} = lists:last(timezone_offsets:get_timezone_offset(Zone)),
 
-%%  LOOKUP = ets:lookup(geonames_table, "01816790"),
-%%  io:format("LOOKUP VALUE: ~p~n", [LOOKUP]),
+  Packed = {ID, AGE, LOCID, CT, L, GIVEN, FAMILY},
 
-  Timezone = geonames_timezone:get_timezone_from_locid(LOCID),
-  Val = cache:get(my_cache, LOCID),
-
-  case Val of
-    undefined ->
-      io:format("~p timezone not found in cache. Adding it now...~n", [Timezone]),
-      cache:put(my_cache, LOCID, Timezone);
-    _ -> io:format("Cached value for key ~p is ~p~n", [LOCID, Val])
+  case NaughtyOrNice of
+    naughty ->
+      FileName = "sorted/naughty_" ++ TimeOffset ++ ".dat",
+      write_to_file(FileName, Packed);
+    nice ->
+      FileName = "sorted/nice_" ++ TimeOffset ++ ".dat",
+      write_to_file(FileName, Packed)
   end.
+
+write_to_file(FileName, Entry) ->
+  {Id, Age, LocId, CT, L, Given, Family} = Entry,
+  {ok, S} = file:open(FileName, [append]),
+  io:format(S, "~s~s~s~s~s~s~s~n", [Id, Age, LocId, CT, L, Given, Family]),
+  file:close(S).
 
 is_naughty_or_nice(SentLetter, Age, GivenName, FamilyName) ->
   case SentLetter of

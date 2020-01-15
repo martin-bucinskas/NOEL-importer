@@ -10,14 +10,28 @@
 -author("martin.bucinskas").
 
 %% API
--export([start/0, get_timezone_offset_from_timezone/2]).
+-export([start/1, get_timezone_offset/1]).
 
-start() ->
-  application:start(yamerl),
-  inets:start().
+start(TimezoneOffsetData) ->
+  ets:new(timezone_offset_table, [public, set, named_table]), %% F***ing public flag was not set!
+  {ok, File} = file:read_file(TimezoneOffsetData),
+  Lines = [binary_to_list(Binary) || Binary <- binary:split(File, <<"\n">>, [global]), Binary =/= << >>],
+  ParsedLines = lists:map(
+    fun(Str) -> string:tokens(Str, "\t") end, Lines
+  ),
+  loop_through_each_entry(ParsedLines).
 
-get_timezone_offset_from_timezone(Timezone, APIKey) ->
-  {ok, {{_Version, 200, _ReasonPhrase}, _Headers, Body}} = httpc:request(get, {"http://api.timezonedb.com/v2.1/convert-time-zone?key=" ++ APIKey ++ "&format=json&from=" ++ Timezone ++ "&to=Europe/Helsinki", []}, [], []),
-  Decoded = yamerl_constr:string(Body, [{schema, json}]),
-  {_, Offset} = lists:last(lists:last(Decoded)),
-  Offset.
+loop_through_each_entry([]) -> finished_parsing_file;
+loop_through_each_entry([H|T]) ->
+  store_row(H),
+  loop_through_each_entry(T).
+
+store_row([]) -> empty1;
+store_row(Row) ->
+  TimezoneId = lists:nth(2, Row),
+  Offset = lists:nth(3, Row),
+  ets:insert(timezone_offset_table, {TimezoneId, Offset}).
+
+get_timezone_offset(TimezoneId) ->
+%%  io:format("Trying to retrieve timezone offset: ~p~n", [TimezoneId]),
+  ets:lookup(timezone_offset_table, TimezoneId).
