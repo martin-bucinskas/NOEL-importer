@@ -1,6 +1,6 @@
 {application, noel_importer,
- [{description, "An OTP application"},
-  {vsn, "0.1.0"},
+ [{description, "N.O.E.L. Parser - Engine Programming Challenge"},
+  {vsn, "2.0.0"},
   {registered, []},
   {mod, {noel_importer_app, []}},
   {applications,
