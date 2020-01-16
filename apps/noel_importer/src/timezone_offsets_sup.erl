@@ -25,10 +25,20 @@ start_link() ->
 %%                  shutdown => shutdown(), % optional
 %%                  type => worker(),       % optional
 %%                  modules => modules()}   % optional
+
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% The supervisor of timezone_offsets module.
+%% Starts the module and keeps it alive, if it fails 2 in the space
+%% 10 seconds, it will fail the program.
+%%
+%% @end
+%%--------------------------------------------------------------------
 init([]) ->
   SupFlags = #{strategy => one_for_all,
-    intensity => 0,
-    period => 1},
+    intensity => 2,
+    period => 10},
   ChildSpecs = [#{id => timezone_offsets, start => { timezone_offsets, start, []}}],
   {ok, {SupFlags, ChildSpecs}}.
 

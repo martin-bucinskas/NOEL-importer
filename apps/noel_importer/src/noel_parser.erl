@@ -12,6 +12,14 @@
 %% API
 -export([parse_directory/1, parse_file/2]).
 
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% This reads through a directory and calls parse_file on every file
+%% found. It also sets up a map of IODevice callback.
+%%
+%% @end
+%%--------------------------------------------------------------------
 parse_directory(Dirname) ->
   OutputDeviceMap = #{
     "naughty_0.0" => file:open("sorted/naughty_0.0.dat", [raw, append]),
@@ -96,6 +104,13 @@ parse_directory(Dirname) ->
                 end, Filenames),
   cleanup(OutputDeviceMap).
 
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Closes the IODevices that were opened in the OutputDeviceMap.
+%%
+%% @end
+%%--------------------------------------------------------------------
 cleanup(OutputDeviceMap) ->
   io:format("Cleaning up! Closing the output file map!~n"),
   maps:fold(
@@ -103,6 +118,7 @@ cleanup(OutputDeviceMap) ->
       {ok, S} = V,
       file:close(S)
     end, ok, OutputDeviceMap).
+
 %%--------------------------------------------------------------------
 %% @private
 %% @doc
@@ -150,13 +166,18 @@ get_all_lines(Device, OutputDeviceMap) ->
 %%--------------------------------------------------------------------
 parse_line(Line, OutputDeviceMap) ->
   {_, EntryLine} = Line,
+
+  %% This is literally the solution to the first problem.
   <<ID:80/bitstring, AGE:24/bitstring, LOCID:64/bitstring, CT:16/bitstring, L:8/bitstring, GIVEN:192/bitstring, FAMILY:192/bitstring, _Rest/bitstring>> = binary:list_to_bin(EntryLine),
   Packed = {ID, AGE, LOCID, CT, L, GIVEN, FAMILY},
   Pid = self(),
 
+  %% Spawning new processes to parallel-ise some calculations such as getting the timezone and calculating naughty vs nice.
   spawn(fun() -> is_naughty_or_nice(Pid, L, AGE, GIVEN, FAMILY) end),
   spawn(fun() -> get_timezone_offset(Pid, LOCID) end),
 
+  %% Receives are looking at this process mailbox, checking for new "mail".
+  %% The messages come from the spawned processes.
   receive
     naughty ->
       receive
@@ -174,6 +195,14 @@ parse_line(Line, OutputDeviceMap) ->
       end
   end.
 
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Gets the timezone offset from a location id and sends  a message
+%% to the process with the Pid process id.
+%%
+%% @end
+%%--------------------------------------------------------------------
 get_timezone_offset(Pid, LocId) ->
   Response = geonames_timezone:get_timezone_from_locid(LocId),
 
@@ -181,22 +210,49 @@ get_timezone_offset(Pid, LocId) ->
   {_, TimeOffset} = lists:last(timezone_offsets:get_timezone_offset(Zone)),
   Pid ! {offset, TimeOffset}.
 
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Writes to an IODevice an entry.
+%%
+%% @end
+%%--------------------------------------------------------------------
 write_to_file(IODevice, Entry) ->
-%%  io:format("IODevice: ~p~n", [IODevice]),
   {Id, Age, LocId, CT, L, Given, Family} = Entry,
-%%  {ok, S} = file:open(FileName, [raw, append]),                                 %% By opening the file as raw
-  file:write(IODevice, list_to_binary([Id, Age, LocId, CT, L, Given, Family, "\n"])).  %% and using file write instead of
-%%  io:format(S, "~s~s~s~s~s~s~s~n", [Id, Age, LocId, CT, L, Given, Family]),   %% io format, I was able to shave off 4 seconds.
-%%  file:close(S).                                                                %% Erlang surprisingly does not complain about closing random string IODevices??????
+%%  {ok, S} = file:open(FileName, [raw, append]),                                       %% By opening the file as raw
+  file:write(IODevice, list_to_binary([Id, Age, LocId, CT, L, Given, Family, "\n"])).   %% and using file write instead of
+%%  io:format(S, "~s~s~s~s~s~s~s~n", [Id, Age, LocId, CT, L, Given, Family]),           %% io format, I was able to shave off 4 seconds.
+%%  file:close(S).                                                                      %% Erlang surprisingly does not complain about closing random string IODevices??????
 
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Calculates if the person is naughty or nice from the provided
+%% data. Sends a response to the mailbox of the process with Pid
+%% process id.
+%%
+%% @end
+%%--------------------------------------------------------------------
 is_naughty_or_nice(Pid, SentLetter, Age, GivenName, FamilyName) ->
   case SentLetter of
     <<"Y">> -> Pid ! nice;
     <<"N">> ->
       FullName = <<GivenName/bitstring, FamilyName/bitstring>>,
+
+      %% Binary Comprehensions to extract vowels and consonants from a list.
+      %% The <= operator lets us use binary stream as a generator.
+      %% List or Binary Comprehensions are a way of building and modifying lists.
+      %% Its based of mathematical set notations.
+      %% It will populate the list with the binary C from the binary stream of FullName only if the constraint is matched.
+      %% In this case, the constraints are is_vowel and is_consonant.
       Vowels = [C || <<C>> <= FullName, is_vowel(C)],
       Consonants = [C || <<C>> <= FullName, is_consonant(C)],
+
       Value = length(Consonants) - length(Vowels) + list_to_integer(binary:bin_to_list(Age)),
+
+      %% To check easily if a value is even or odd,
+      %% I take the value and apply the bitwise AND operation against the value of 1.
+      %% Since that just applies a mask to the least significant bit, if the LSB is 0, then the value is even, otherwise its odd.
       if
         Value band 1 == 0 -> Pid ! nice;
         true -> Pid ! naughty
@@ -204,6 +260,13 @@ is_naughty_or_nice(Pid, SentLetter, Age, GivenName, FamilyName) ->
       _ -> Pid ! naughty
   end.
 
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Really simple pattern matching to check if a character is a vowel.
+%%
+%% @end
+%%--------------------------------------------------------------------
 is_vowel(C) ->
   if
     C =:= $A -> true;
@@ -214,6 +277,15 @@ is_vowel(C) ->
     true -> false
   end.
 
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Checks to see if given character is a consonant.
+%% A consonant is checked by first checking if the letter is a vowel,
+%% if the return is true, then the character is not a consonant.
+%%
+%% @end
+%%--------------------------------------------------------------------
 is_consonant(C) ->
   IsVowel = is_vowel(C),
 

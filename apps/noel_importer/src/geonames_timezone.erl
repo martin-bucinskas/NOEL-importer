@@ -12,6 +12,13 @@
 %% API
 -export([start/1, get_timezone_from_locid/1]).
 
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Loads up the cities data into the ETS table.
+%%
+%% @end
+%%--------------------------------------------------------------------
 start(CitiesData) ->
   ets:new(geonames_table, [public, set, named_table, {read_concurrency,  true}, {write_concurrency, true}]), %% F***ing public flag was not set!
   {ok, File} = file:read_file(CitiesData),
@@ -21,11 +28,27 @@ start(CitiesData) ->
   ),
   loop_through_each_entry(ParsedLines).
 
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Recursion in Erlang, this loops through the list and executes a
+%% function store_row with the HEAD as the argument, recursing with
+%% the tail as the new argument.
+%%
+%% @end
+%%--------------------------------------------------------------------
 loop_through_each_entry([]) -> finished_parsing_file;
 loop_through_each_entry([H|T]) ->
   store_row(H),
   loop_through_each_entry(T).
 
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Stores a row inside ETS.
+%%
+%% @end
+%%--------------------------------------------------------------------
 store_row([]) -> empty1;
 store_row(Row) ->
   LocationID = lists:nth(1, Row),
@@ -33,6 +56,13 @@ store_row(Row) ->
   Timezone = lists:nth(3, Row),
   ets:insert(geonames_table, {LocationID, CityName, Timezone}).
 
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Performs a lookup on the ETS table.
+%%
+%% @end
+%%--------------------------------------------------------------------
 get_timezone_from_locid(LocationId) ->
   ListString = binary:bin_to_list(LocationId),
   ets:lookup(geonames_table, ListString).
